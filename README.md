@@ -2,6 +2,8 @@
 
 Browser control surface for the Kraftor SAM firmware. It provides live text-to-speech control, MIDI voice shaping, RAM and FRAM sentence-bank editing, printable reference sheets, and a few retro interface skins.
 
+[Open the published app](https://deladriere.github.io/SAM_Designer/)
+
 ![Kraftor SAM Designer screenshot](assets/screenshot.png)
 
 ## Features
@@ -47,5 +49,4 @@ The included [user manual](user_manual.html) has setup details, MIDI mappings, R
 - `index.html` - Main Kraftor SAM Designer interface.
 - `user_manual.html` - Browser-readable user manual.
 - `assets/screenshot.png` - Screenshot used by this README.
-
 
