@@ -236,6 +236,29 @@
       line-height: 1.35;
     }
 
+    #midiOutputPickWrap.midi-ready select {
+      border-color: var(--accent);
+      border-top-color: var(--accent-2);
+      border-left-color: var(--accent-2);
+      box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.22);
+    }
+
+    .conn-hint {
+      min-height: 16px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .conn-hint:empty {
+      display: none;
+    }
+
+    .conn-hint.ready {
+      color: var(--accent);
+      font-weight: 900;
+    }
+
     .status {
       display: inline-flex;
       align-items: center;
@@ -1037,7 +1060,7 @@
     <header>
       <h1>Kraftor SAM</h1>
       <div class="status-row">
-        <div id="versionReadout" class="version-readout">GUI v1.1 | FW --</div>
+        <div id="versionReadout" class="version-readout">GUI v1.2 | FW --</div>
         <a class="manual-link" href="user_manual.html">Manual</a>
         <a class="source-link" href="https://github.com/deladriere/SAM_Designer" target="_blank" rel="noopener">Source</a>
         <select id="skinSelect" class="skin-select" aria-label="Skin">
@@ -1077,6 +1100,7 @@
                 <option value="">Not connected</option>
               </select>
             </div>
+            <div id="midiOutputHint" class="conn-hint" aria-live="polite"></div>
             <div id="midiOutputReadout" class="conn-readout" role="status" aria-live="polite" hidden tabindex="0" aria-labelledby="lblMidiPort"></div>
           </div>
           <div class="row">
@@ -1236,8 +1260,19 @@
       let voicePotsReady = false;
       const voiceDials = {};
 
-      const GUI_VERSION = '1.1';
-      const boardCaps = { ram: 0, fram: 0, ramBase: 28, framMidiBase: 48, framMidiSlots: 80, max: 200, ver: '' };
+      const GUI_VERSION = '1.2';
+      const DEFAULT_RAM_SLOTS = 20;
+      const DEFAULT_RAM_BASE = 28;
+      const DEFAULT_SENTENCE_MAX = 200;
+      const boardCaps = {
+        ram: 0,
+        fram: 0,
+        ramBase: DEFAULT_RAM_BASE,
+        framMidiBase: 48,
+        framMidiSlots: 80,
+        max: DEFAULT_SENTENCE_MAX,
+        ver: ''
+      };
       const STORAGE_COMMAND_TIMEOUT_MS = 120000;
       const slotState = { R: [], F: [] };
       let serialLineBuffer = '';
@@ -1809,15 +1844,31 @@
           appendSerialLog('<< retrying !INFO?\r\n');
           if (await tryOnce(3000)) return;
           appendSerialLog('<< no !INFO reply (firmware too old?)\r\n');
+          applyLegacyRamFallback();
         })();
+      }
+
+      function applyLegacyRamFallback() {
+        if (!serialWriter || boardCaps.ram > 0) return;
+        boardCaps.ram = DEFAULT_RAM_SLOTS;
+        boardCaps.fram = 0;
+        boardCaps.ramBase = DEFAULT_RAM_BASE;
+        boardCaps.framMidiBase = DEFAULT_RAM_BASE + DEFAULT_RAM_SLOTS;
+        boardCaps.framMidiSlots = 0;
+        boardCaps.max = DEFAULT_SENTENCE_MAX;
+        boardCaps.ver = 'legacy';
+        appendSerialLog('<< using default RAM layout: 20 slots, MIDI 28-47\r\n');
+        applyBoardCaps();
+        sendCommand('!DUMP R').catch(() => {});
       }
 
       function handleInfoReply(line) {
         const data = {};
         line.replace(/(\w+)=(\S+)/g, (_, k, v) => { data[k] = v; });
-        boardCaps.ram = parseInt(data.RAM || '0', 10) || 0;
+        const ramSlots = parseInt(data.RAM, 10);
+        boardCaps.ram = Number.isFinite(ramSlots) && ramSlots > 0 ? ramSlots : DEFAULT_RAM_SLOTS;
         boardCaps.fram = parseInt(data.FRAM || '0', 10) || 0;
-        boardCaps.ramBase = parseInt(data.RAMBASE || '28', 10) || 28;
+        boardCaps.ramBase = parseInt(data.RAMBASE || String(DEFAULT_RAM_BASE), 10) || DEFAULT_RAM_BASE;
 
         // FRAM MIDI rows start *after* the RAM note block. Never use legacy FRAMBASE=28 (overlapped RAM).
         const firstFramNoteNominal = boardCaps.ramBase + boardCaps.ram;
@@ -1840,7 +1891,7 @@
         }
         boardCaps.framMidiSlots = Number.isFinite(midifCnt) ? midifCnt : boardCaps.fram;
 
-        boardCaps.max = parseInt(data.MAX || '200', 10) || 200;
+        boardCaps.max = parseInt(data.MAX || String(DEFAULT_SENTENCE_MAX), 10) || DEFAULT_SENTENCE_MAX;
         boardCaps.ver = data.VER || '?';
 
         applyBoardCaps();
@@ -2269,10 +2320,11 @@
         if (!select) return;
 
         const current = select.value;
-        select.innerHTML = '<option value="">Not connected</option>';
+        select.innerHTML = '<option value="">No MIDI output selected</option>';
 
+        const outputs = midiAccess ? Array.from(midiAccess.outputs.values()) : [];
         if (midiAccess) {
-          Array.from(midiAccess.outputs.values()).forEach(output => {
+          outputs.forEach(output => {
             const option = document.createElement('option');
             option.value = output.id;
             option.textContent = output.name || output.manufacturer || output.id;
@@ -2281,7 +2333,11 @@
           });
         }
 
-        if (current) select.value = current;
+        if (current && outputs.some(output => output.id === current)) {
+          select.value = current;
+        } else if (!midiOutput && outputs.length === 1) {
+          select.value = outputs[0].id;
+        }
         if (midiOutput && select.value !== midiOutput.id) {
           midiOutput = null;
         }
@@ -2305,6 +2361,7 @@
       function updateMidiUi() {
         const pickWrap = document.getElementById('midiOutputPickWrap');
         const readout = document.getElementById('midiOutputReadout');
+        const hint = document.getElementById('midiOutputHint');
         const dot = document.getElementById('midiStatusDot');
         const button = document.getElementById('midiConnectBtn');
         const select = document.getElementById('midiOutputSelect');
@@ -2312,6 +2369,10 @@
         if (!supportsMidi) {
           if (pickWrap) pickWrap.hidden = true;
           if (select) select.disabled = true;
+          if (hint) {
+            hint.textContent = '';
+            hint.classList.remove('ready');
+          }
           if (readout) {
             readout.hidden = false;
             readout.textContent = 'Web MIDI not supported';
@@ -2322,19 +2383,39 @@
         }
 
         const connected = Boolean(midiOutput);
+        const outputCount = midiAccess ? midiAccess.outputs.size : 0;
+        const selectedName = select && select.value && midiAccess
+          ? (midiAccess.outputs.get(select.value)?.name || midiAccess.outputs.get(select.value)?.id || '')
+          : '';
         if (button) button.disabled = false;
         if (button) button.textContent = connected ? 'Disconnect MIDI' : 'Connect MIDI';
         if (dot) dot.classList.toggle('connected', connected);
 
         if (pickWrap && readout) {
           if (connected) {
+            pickWrap.classList.remove('midi-ready');
             pickWrap.hidden = true;
             readout.hidden = false;
-            readout.textContent = midiOutput.name || midiOutput.id || 'Connected';
+            readout.textContent = `Connected: ${midiOutput.name || midiOutput.id || 'MIDI output'}`;
           } else {
+            pickWrap.classList.toggle('midi-ready', outputCount > 0);
             pickWrap.hidden = false;
             readout.hidden = true;
             readout.textContent = '';
+          }
+        }
+        if (hint) {
+          hint.classList.toggle('ready', !connected && outputCount > 0);
+          if (connected) {
+            hint.textContent = '';
+          } else if (!midiAccess) {
+            hint.textContent = 'Click Connect MIDI to show available outputs.';
+          } else if (outputCount === 0) {
+            hint.textContent = 'No MIDI outputs found.';
+          } else if (selectedName) {
+            hint.textContent = `Ready: ${selectedName}`;
+          } else {
+            hint.textContent = `${outputCount} MIDI output(s) available. Choose one.`;
           }
         }
         if (select) select.disabled = connected;
@@ -2383,6 +2464,7 @@
       document.getElementById('midiOutputSelect')?.addEventListener('change', () => {
         if (!midiOutput) connectSelectedMidiOutput();
       });
+      updateMidiUi();
 
       document.getElementById('voicePresetSelect')?.addEventListener('change', event => {
         applyVoicePreset(event.target.value, true);
