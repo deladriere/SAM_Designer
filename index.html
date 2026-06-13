@@ -1257,6 +1257,7 @@
       let rememberedPorts = [];
       let midiAccess = null;
       let midiOutput = null;
+      let midiOutputLabels = new Map();
       let voicePotsReady = false;
       const voiceDials = {};
 
@@ -2315,6 +2316,35 @@
         }
       }
 
+      function midiOutputBaseName(output) {
+        return output?.name || output?.manufacturer || output?.id || 'MIDI output';
+      }
+
+      function compactMidiOutputId(output) {
+        const id = String(output?.id || '');
+        return id.length > 8 ? id.slice(-8) : id;
+      }
+
+      function buildMidiOutputLabels(outputs) {
+        const nameCounts = new Map();
+        outputs.forEach(output => {
+          const name = midiOutputBaseName(output);
+          nameCounts.set(name, (nameCounts.get(name) || 0) + 1);
+        });
+
+        return new Map(outputs.map(output => {
+          const name = midiOutputBaseName(output);
+          const duplicate = nameCounts.get(name) > 1;
+          const suffix = compactMidiOutputId(output);
+          return [output.id, duplicate && suffix ? `${name} [${suffix}]` : name];
+        }));
+      }
+
+      function midiOutputDisplayName(output) {
+        if (!output) return 'MIDI output';
+        return midiOutputLabels.get(output.id) || midiOutputBaseName(output);
+      }
+
       function listMidiOutputs() {
         const select = document.getElementById('midiOutputSelect');
         if (!select) return;
@@ -2323,12 +2353,15 @@
         select.innerHTML = '<option value="">No MIDI output selected</option>';
 
         const outputs = midiAccess ? Array.from(midiAccess.outputs.values()) : [];
+        midiOutputLabels = buildMidiOutputLabels(outputs);
         if (midiAccess) {
           outputs.forEach(output => {
             const option = document.createElement('option');
             option.value = output.id;
-            option.textContent = output.name || output.manufacturer || output.id;
-            option.title = option.textContent;
+            option.textContent = midiOutputDisplayName(output);
+            option.title = output.id === option.textContent
+              ? option.textContent
+              : `${option.textContent} - Web MIDI ID: ${output.id}`;
             select.appendChild(option);
           });
         }
@@ -2349,7 +2382,7 @@
         if (!midiAccess || !select || !select.value) return;
         midiOutput = midiAccess.outputs.get(select.value) || null;
         updateMidiUi();
-        if (midiOutput) appendSerialLog(`<< MIDI CONNECTED ${midiOutput.name || midiOutput.id}\r\n`);
+        if (midiOutput) appendSerialLog(`<< MIDI CONNECTED ${midiOutputDisplayName(midiOutput)}\r\n`);
       }
 
       function disconnectMidiOutput() {
@@ -2385,7 +2418,7 @@
         const connected = Boolean(midiOutput);
         const outputCount = midiAccess ? midiAccess.outputs.size : 0;
         const selectedName = select && select.value && midiAccess
-          ? (midiAccess.outputs.get(select.value)?.name || midiAccess.outputs.get(select.value)?.id || '')
+          ? midiOutputDisplayName(midiAccess.outputs.get(select.value))
           : '';
         if (button) button.disabled = false;
         if (button) button.textContent = connected ? 'Disconnect MIDI' : 'Connect MIDI';
@@ -2396,7 +2429,7 @@
             pickWrap.classList.remove('midi-ready');
             pickWrap.hidden = true;
             readout.hidden = false;
-            readout.textContent = `Connected: ${midiOutput.name || midiOutput.id || 'MIDI output'}`;
+            readout.textContent = `Connected: ${midiOutputDisplayName(midiOutput)}`;
           } else {
             pickWrap.classList.toggle('midi-ready', outputCount > 0);
             pickWrap.hidden = false;

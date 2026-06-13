@@ -40,6 +40,11 @@ For MIDI voice control:
 3. Select the MIDI output.
 4. Move the voice controls or choose a preset.
 
+When multiple boards expose the same MIDI name, the selector adds a compact Web MIDI ID
+to each duplicate name. This distinguishes the browser endpoints, but does not establish
+which MIDI endpoint belongs to a particular serial port. Reliable automatic pairing
+requires each board to expose a unique USB serial number or unique MIDI product name.
+
 ## Manual
 
 The included [user manual](user_manual.html) has setup details, MIDI mappings, RAM/FRAM behavior, and firmware command notes.
@@ -49,4 +54,3 @@ The included [user manual](user_manual.html) has setup details, MIDI mappings, R
 - `index.html` - Main Kraftor SAM Designer interface.
 - `user_manual.html` - Browser-readable user manual.
 - `assets/screenshot.png` - Screenshot used by this README.
-
