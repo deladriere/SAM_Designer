@@ -120,7 +120,7 @@
   <main>
     <header>
       <h1>Kraftor SAM User Manual</h1>
-      <p>Browser control surface for the Kraftor SAM firmware.</p>
+      <p>Browser control surface for the Kraftor SAM firmware. This manual covers GUI version 1.4.</p>
       <p><a href="index.html">Open the GUI</a></p>
     </header>
 
@@ -128,7 +128,7 @@
       <h2>Requirements</h2>
       <ul>
         <li>A browser with Web Serial and Web MIDI support, usually Chrome or Edge.</li>
-        <li>The Kraftor SAM firmware running on the board.</li>
+        <li>The Kraftor SAM firmware running on the board. Firmware 1.2 or newer is recommended.</li>
         <li>USB connected to the computer.</li>
       </ul>
     </section>
@@ -139,10 +139,11 @@
         <li>Open <code>GUI/index.html</code>.</li>
         <li>Click <code>Select port</code>.</li>
         <li>Choose the Kraftor USB serial device.</li>
-        <li>Type text in the text box.</li>
-        <li>Click <code>Speak</code>.</li>
+        <li>With firmware 1.2 or newer, confirm that the GUI shows <code>Polaxis Kraftor SAM</code> and the same chip ID shown on the board display at startup.</li>
+        <li>Click <code>Identify Serial</code> to make the connected board speak "serial connection".</li>
+        <li>Type text in the text box and click <code>Speak</code>.</li>
       </ol>
-      <p>After a serial port is selected, the GUI shows <code>Kraftor</code> as the active connection. The browser's serial chooser remains responsible for selecting the actual USB port.</p>
+      <p>Firmware 1.2 reports <code>MODEL=SAM</code> and its unique SAMD21 chip ID during the serial handshake. Firmware 1.1 remains compatible, but the GUI displays only <code>Kraftor</code> because that firmware does not report a model or chip ID.</p>
       <p>The GUI sends the text line over USB Serial at <code>115200</code>. The firmware speaks the line when it receives Enter.</p>
     </section>
 
@@ -152,9 +153,12 @@
         <li>Click <code>Connect MIDI</code>.</li>
         <li>Allow browser MIDI access if prompted.</li>
         <li>Select the desired MIDI output.</li>
+        <li>Click <code>Identify MIDI</code>.</li>
+        <li>Confirm that the expected Kraftor speaks "meedee connection".</li>
         <li>Move the knobs.</li>
       </ol>
-      <p>If multiple boards use the same MIDI name, the selector adds a compact Web MIDI ID to each duplicate name. The IDs distinguish the available browser endpoints. They cannot reliably identify which MIDI endpoint belongs to a particular serial port unless the firmware exposes a unique USB serial number or unique MIDI product name for each board.</p>
+      <p><code>Identify MIDI</code> requires both serial and MIDI connections. The GUI writes "meedee connection" into temporary RAM slot 0 through serial, then sends MIDI note 28 to the selected MIDI output. RAM is cleared at boot, so the identification sentence is temporary and remains only for the current session.</p>
+      <p>If multiple boards use the same MIDI name, the selector adds a compact Web MIDI ID to each duplicate name. Chrome does not expose a guaranteed relationship between a Web Serial port and a Web MIDI endpoint. Use <code>Identify Serial</code> and <code>Identify MIDI</code> to match the two connections.</p>
       <table>
         <thead>
           <tr>
@@ -183,6 +187,41 @@
             <td>Throat</td>
             <td>CC 3</td>
             <td>SAM throat parameter.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Firmware Compatibility</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Firmware 1.1</th>
+            <th>Firmware 1.2+</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Speech, sentence banks, and MIDI controls</td>
+            <td>Supported</td>
+            <td>Supported</td>
+          </tr>
+          <tr>
+            <td>Identify Serial and Identify MIDI</td>
+            <td>Supported</td>
+            <td>Supported</td>
+          </tr>
+          <tr>
+            <td>Model and chip ID in the GUI</td>
+            <td>Not reported</td>
+            <td>Supported</td>
+          </tr>
+          <tr>
+            <td>Chip ID on the board display at startup</td>
+            <td>Not available</td>
+            <td>Supported</td>
           </tr>
         </tbody>
       </table>

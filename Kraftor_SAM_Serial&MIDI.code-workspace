@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "../../Software/Kraftor_SAM_Serial&MIDI"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"workbench.colorCustomizations": {
+			"activityBar.background": "#E3AA5E",
+			"titleBar.activeBackground": "#E7B879",
+			"titleBar.activeForeground": "#241706",
+			"titleBar.inactiveBackground": "#A1BB94",
+			"titleBar.inactiveForeground": "#151B11",
+			"statusBar.background": "#925E19",
+			"statusBar.foreground": "#FEFBF7",
+			"statusBar.debuggingBackground": "#925E19",
+			"statusBar.debuggingForeground": "#FEFBF7",
+			"statusBar.noFolderBackground": "#925E19",
+			"statusBar.noFolderForeground": "#FEFBF7"
+		}
+	}
+}

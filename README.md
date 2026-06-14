@@ -1,6 +1,6 @@
 # Kraftor SAM Designer
 
-Browser control surface for the Kraftor SAM firmware. It provides live text-to-speech control, MIDI voice shaping, RAM and FRAM sentence-bank editing, printable reference sheets, and a few retro interface skins.
+Browser control surface for the Kraftor SAM firmware. GUI version 1.4 provides live text-to-speech control, MIDI voice shaping, RAM and FRAM sentence-bank editing, printable reference sheets, and a few retro interface skins.
 
 [Open the published app](https://deladriere.github.io/SAM_Designer/)
 
@@ -9,6 +9,8 @@ Browser control surface for the Kraftor SAM firmware. It provides live text-to-s
 ## Features
 
 - Speak typed text over USB Serial at 115200 baud.
+- Display the connected board model and unique chip ID with firmware 1.2 or newer.
+- Identify serial and MIDI connections when several Kraftor boards are connected.
 - Shape the SAM voice with Speed, Pitch, Mouth, and Throat controls.
 - Send MIDI CC and pitch-bend messages to the firmware.
 - Edit RAM sentence slots and FRAM sentence slots when supported by the board.
@@ -30,20 +32,32 @@ For serial speech:
 
 1. Click `Select port`.
 2. Choose the Kraftor USB serial device.
-3. Type text in the live speech field.
-4. Click `Speak`.
+3. Confirm the board model and chip ID shown by the app.
+4. Click `Identify Serial` to make that board speak "serial connection".
+5. Type text in the live speech field.
+6. Click `Speak`.
 
 For MIDI voice control:
 
 1. Click `Connect MIDI`.
 2. Allow MIDI access if prompted.
 3. Select the MIDI output.
-4. Move the voice controls or choose a preset.
+4. Click `Identify MIDI`. The app writes "meedee connection" into temporary RAM
+   slot 0 through the selected serial connection, then sends MIDI note 28.
+5. Confirm that the expected board speaks.
+6. Move the voice controls or choose a preset.
 
 When multiple boards expose the same MIDI name, the selector adds a compact Web MIDI ID
-to each duplicate name. This distinguishes the browser endpoints, but does not establish
-which MIDI endpoint belongs to a particular serial port. Reliable automatic pairing
-requires each board to expose a unique USB serial number or unique MIDI product name.
+to each duplicate name. Chrome does not expose a guaranteed relationship between a Web
+Serial port and a Web MIDI endpoint, so `Identify Serial` and `Identify MIDI` provide a
+practical way to match them.
+
+## Firmware Compatibility
+
+- Firmware 1.2 or newer reports `MODEL=SAM` and the unique SAMD21 chip ID. The app
+  displays both after connecting over serial.
+- Firmware 1.1 remains compatible with speech, sentence banks, MIDI controls, and both
+  identification buttons, but the serial connection label cannot show its model or chip ID.
 
 ## Manual
 

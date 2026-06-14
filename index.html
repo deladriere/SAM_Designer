@@ -234,6 +234,7 @@
       font: inherit;
       font-size: 13px;
       line-height: 1.35;
+      overflow-wrap: anywhere;
     }
 
     #midiOutputPickWrap.midi-ready select {
@@ -1060,7 +1061,7 @@
     <header>
       <h1>Kraftor SAM</h1>
       <div class="status-row">
-        <div id="versionReadout" class="version-readout">GUI v1.3 | FW --</div>
+        <div id="versionReadout" class="version-readout">GUI v1.4 | FW --</div>
         <a class="manual-link" href="user_manual.html">Manual</a>
         <a class="source-link" href="https://github.com/deladriere/SAM_Designer" target="_blank" rel="noopener">Source</a>
         <select id="skinSelect" class="skin-select" aria-label="Skin">
@@ -1086,6 +1087,7 @@
           <div class="row">
             <button id="serialConnectBtn" class="primary" type="button">Select port</button>
             <button id="serialDisconnectBtn" type="button">Disconnect</button>
+            <button id="serialIdentifyBtn" type="button">Identify Serial</button>
             <button id="serialRefreshBtn" type="button">Refresh</button>
           </div>
         </div>
@@ -1105,6 +1107,7 @@
           </div>
           <div class="row">
             <button id="midiConnectBtn" class="primary" type="button">Connect MIDI</button>
+            <button id="midiIdentifyBtn" type="button">Identify MIDI</button>
             <button id="midiRefreshBtn" type="button">Refresh</button>
           </div>
         </div>
@@ -1261,7 +1264,7 @@
       let voicePotsReady = false;
       const voiceDials = {};
 
-      const GUI_VERSION = '1.3';
+      const GUI_VERSION = '1.4';
       const DEFAULT_RAM_SLOTS = 20;
       const DEFAULT_RAM_BASE = 28;
       const DEFAULT_SENTENCE_MAX = 200;
@@ -1272,7 +1275,9 @@
         framMidiBase: 48,
         framMidiSlots: 80,
         max: DEFAULT_SENTENCE_MAX,
-        ver: ''
+        ver: '',
+        model: '',
+        id: ''
       };
       const STORAGE_COMMAND_TIMEOUT_MS = 120000;
       const slotState = { R: [], F: [] };
@@ -1443,12 +1448,16 @@
         const connected = Boolean(serialPort && serialPort.readable && serialPort.writable);
         const button = document.getElementById('serialConnectBtn');
         const disconnectButton = document.getElementById('serialDisconnectBtn');
+        const identifyButton = document.getElementById('serialIdentifyBtn');
         const readout = document.getElementById('serialPortReadout');
         const dot = document.getElementById('statusDot');
         const speak = document.getElementById('speakBtn');
 
         if (button) button.textContent = connected ? 'Change port' : 'Select port';
         if (disconnectButton) disconnectButton.disabled = !connected;
+        if (identifyButton) identifyButton.disabled = !connected;
+        const midiIdentifyButton = document.getElementById('midiIdentifyBtn');
+        if (midiIdentifyButton) midiIdentifyButton.disabled = !(connected && midiOutput);
         if (dot) dot.classList.toggle('connected', connected);
         if (readout) {
           if (!connected) {
@@ -1456,7 +1465,10 @@
               ? 'Not connected'
               : `${rememberedPorts.length} saved port(s) — use Select port`;
           } else {
-            readout.textContent = 'Kraftor';
+            const model = boardCaps.model || 'Kraftor';
+            readout.textContent = boardCaps.id
+              ? `${model} · ID ${boardCaps.id}`
+              : model;
           }
         }
         if (speak) speak.disabled = !connected;
@@ -1543,6 +1555,10 @@
       async function speakText() {
         const input = document.getElementById('speakText');
         await sendSerialLine(input ? input.value : '');
+      }
+
+      async function identifySerialBoard() {
+        await sendSerialLine('serial connection');
       }
 
       const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -1894,6 +1910,12 @@
 
         boardCaps.max = parseInt(data.MAX || String(DEFAULT_SENTENCE_MAX), 10) || DEFAULT_SENTENCE_MAX;
         boardCaps.ver = data.VER || '?';
+        boardCaps.model = /^[A-Za-z0-9_-]{1,16}$/.test(data.MODEL || '')
+          ? `Polaxis Kraftor ${data.MODEL.toUpperCase()}`
+          : 'Kraftor';
+        boardCaps.id = /^[0-9A-Fa-f]{32}$/.test(data.ID || '')
+          ? data.ID.toUpperCase()
+          : '';
 
         applyBoardCaps();
 
@@ -1967,12 +1989,15 @@
         if (activeTab === 'fram' && !framAvailable) selectTab('live');
         if (activeTab === 'ram' && !ramAvailable) selectTab('live');
         updateVersionReadout();
+        updateSerialUi();
       }
 
       function resetBoardState() {
         boardCaps.ram = 0;
         boardCaps.fram = 0;
         boardCaps.ver = '';
+        boardCaps.model = '';
+        boardCaps.id = '';
         applyBoardCaps();
         const list = document.getElementById('framSlotList');
         if (list) list.innerHTML = '<div class="bank-empty">Connect to a board with FRAM (RC256 at 0x50) to edit sentences.</div>';
@@ -2397,6 +2422,7 @@
         const hint = document.getElementById('midiOutputHint');
         const dot = document.getElementById('midiStatusDot');
         const button = document.getElementById('midiConnectBtn');
+        const identifyButton = document.getElementById('midiIdentifyBtn');
         const select = document.getElementById('midiOutputSelect');
 
         if (!supportsMidi) {
@@ -2412,6 +2438,7 @@
           }
           if (dot) dot.classList.remove('connected');
           if (button) button.disabled = true;
+          if (identifyButton) identifyButton.disabled = true;
           return;
         }
 
@@ -2422,6 +2449,8 @@
           : '';
         if (button) button.disabled = false;
         if (button) button.textContent = connected ? 'Disconnect MIDI' : 'Connect MIDI';
+        const serialConnected = Boolean(serialPort && serialPort.readable && serialPort.writable);
+        if (identifyButton) identifyButton.disabled = !(connected && serialConnected);
         if (dot) dot.classList.toggle('connected', connected);
 
         if (pickWrap && readout) {
@@ -2476,6 +2505,29 @@
         }
       }
 
+      async function identifyMidiBoard() {
+        if (!midiOutput || !serialWriter || boardCaps.ram <= 0) return;
+        const channel = 0;
+        const note = 28;
+        const velocity = 100;
+        const button = document.getElementById('midiIdentifyBtn');
+        if (button) button.disabled = true;
+
+        try {
+          await sendCommand('!SET R 0 meedee connection', {
+            ack: true,
+            timeoutMs: STORAGE_COMMAND_TIMEOUT_MS
+          });
+          midiOutput.send([0x90 | channel, note, velocity]);
+          midiOutput.send([0x80 | channel, note, 0], window.performance.now() + 300);
+          appendSerialLog(`>> MIDI IDENTIFY note ${note} / ${midiNoteName(note)}\r\n`);
+        } catch (err) {
+          appendSerialLog(`<< MIDI IDENTIFY FAILED ${err.message || 'error'}\r\n`);
+        } finally {
+          updateMidiUi();
+        }
+      }
+
       document.getElementById('midiRefreshBtn')?.addEventListener('click', () => {
         if (!midiAccess) {
           initMidiAccess();
@@ -2483,6 +2535,9 @@
           listMidiOutputs();
         }
       });
+
+      document.getElementById('serialIdentifyBtn')?.addEventListener('click', identifySerialBoard);
+      document.getElementById('midiIdentifyBtn')?.addEventListener('click', identifyMidiBoard);
 
       document.getElementById('midiConnectBtn')?.addEventListener('click', async () => {
         if (!supportsMidi) return;
