@@ -25,8 +25,8 @@
       margin: 0;
       min-height: 100vh;
       background:
-        linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
         linear-gradient(135deg, var(--bg), #003f7a);
       background-size: 16px 16px, 16px 16px, auto;
       color: var(--text);
@@ -120,7 +120,7 @@
   <main>
     <header>
       <h1>Kraftor SAM User Manual</h1>
-      <p>Browser control surface for the Kraftor SAM firmware. This manual covers GUI version 1.4.</p>
+      <p>Browser control surface for the Kraftor SAM firmware. This manual covers GUI version 1.5.</p>
       <p><a href="index.html">Open the GUI</a></p>
     </header>
 
@@ -128,7 +128,8 @@
       <h2>Requirements</h2>
       <ul>
         <li>A browser with Web Serial and Web MIDI support, usually Chrome or Edge.</li>
-        <li>The Kraftor SAM firmware running on the board. Firmware 1.2 or newer is recommended.</li>
+        <li>The Kraftor SAM firmware running on the board. Firmware 1.3 is recommended for selectable MIDI channels.
+        </li>
         <li>USB connected to the computer.</li>
       </ul>
     </section>
@@ -139,12 +140,16 @@
         <li>Open <code>GUI/index.html</code>.</li>
         <li>Click <code>Select port</code>.</li>
         <li>Choose the Kraftor USB serial device.</li>
-        <li>With firmware 1.2 or newer, confirm that the GUI shows <code>Polaxis Kraftor SAM</code> and the same chip ID shown on the board display at startup.</li>
+        <li>With firmware 1.2 or newer, confirm that the GUI shows <code>Polaxis Kraftor SAM</code> and the same chip ID
+          shown on the board display at startup.</li>
         <li>Click <code>Identify Serial</code> to make the connected board speak "serial connection".</li>
         <li>Type text in the text box and click <code>Speak</code>.</li>
       </ol>
-      <p>Firmware 1.2 reports <code>MODEL=SAM</code> and its unique SAMD21 chip ID during the serial handshake. Firmware 1.1 remains compatible, but the GUI displays only <code>Kraftor</code> because that firmware does not report a model or chip ID.</p>
-      <p>The GUI sends the text line over USB Serial at <code>115200</code>. The firmware speaks the line when it receives Enter.</p>
+      <p>Firmware 1.2 reports <code>MODEL=SAM</code> and its unique SAMD21 chip ID during the serial handshake. Firmware
+        1.1 remains compatible, but the GUI displays only <code>Kraftor</code> because that firmware does not report a
+        model or chip ID.</p>
+      <p>The GUI sends the text line over USB Serial at <code>115200</code>. The firmware speaks the line when it
+        receives Enter.</p>
     </section>
 
     <section>
@@ -153,12 +158,20 @@
         <li>Click <code>Connect MIDI</code>.</li>
         <li>Allow browser MIDI access if prompted.</li>
         <li>Select the desired MIDI output.</li>
+        <li>Select the MIDI channel that matches the firmware 1.3 DIP switches.</li>
         <li>Click <code>Identify MIDI</code>.</li>
         <li>Confirm that the expected Kraftor speaks "meedee connection".</li>
         <li>Move the knobs.</li>
       </ol>
-      <p><code>Identify MIDI</code> requires both serial and MIDI connections. The GUI writes "meedee connection" into temporary RAM slot 0 through serial, then sends MIDI note 28 to the selected MIDI output. RAM is cleared at boot, so the identification sentence is temporary and remains only for the current session.</p>
-      <p>If multiple boards use the same MIDI name, the selector adds a compact Web MIDI ID to each duplicate name. Chrome does not expose a guaranteed relationship between a Web Serial port and a Web MIDI endpoint. Use <code>Identify Serial</code> and <code>Identify MIDI</code> to match the two connections.</p>
+      <p>The selected channel applies to CC 1–3, pitch bend, presets, and <code>Identify MIDI</code>. The selection is
+        remembered by the browser.</p>
+      <p><code>Identify MIDI</code> requires both serial and MIDI connections. The GUI writes "meedee connection" into
+        temporary RAM slot 0 through serial, then sends MIDI note 28 on the selected channel to the selected MIDI
+        output. RAM is cleared at boot, so the identification sentence is temporary and remains only for the current
+        session.</p>
+      <p>If multiple boards use the same MIDI name, the selector adds a compact Web MIDI ID to each duplicate name.
+        Chrome does not expose a guaranteed relationship between a Web Serial port and a Web MIDI endpoint. Use
+        <code>Identify Serial</code> and <code>Identify MIDI</code> to match the two connections.</p>
       <table>
         <thead>
           <tr>
@@ -190,6 +203,136 @@
           </tr>
         </tbody>
       </table>
+
+      <h2 id="midi-dip-switches">Firmware 1.3 DIP Switches</h2>
+      <p>Move a switch toward its <strong>ON</strong> marking to turn it on. DIP1 is the highest-value switch and DIP4
+        is the lowest-value switch. Choose the channel selected in the GUI, then reset or power-cycle Kraftor so the
+        firmware reads the new setting. All switches OFF select Omni mode, which receives every MIDI channel.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Mode</th>
+            <th>DIP1 (8)</th>
+            <th>DIP2 (4)</th>
+            <th>DIP3 (2)</th>
+            <th>DIP4 (1)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Omni</td>
+            <td>OFF</td>
+            <td>OFF</td>
+            <td>OFF</td>
+            <td>OFF</td>
+          </tr>
+          <tr>
+            <td>Channel 1</td>
+            <td>OFF</td>
+            <td>OFF</td>
+            <td>OFF</td>
+            <td>ON</td>
+          </tr>
+          <tr>
+            <td>Channel 2</td>
+            <td>OFF</td>
+            <td>OFF</td>
+            <td>ON</td>
+            <td>OFF</td>
+          </tr>
+          <tr>
+            <td>Channel 3</td>
+            <td>OFF</td>
+            <td>OFF</td>
+            <td>ON</td>
+            <td>ON</td>
+          </tr>
+          <tr>
+            <td>Channel 4</td>
+            <td>OFF</td>
+            <td>ON</td>
+            <td>OFF</td>
+            <td>OFF</td>
+          </tr>
+          <tr>
+            <td>Channel 5</td>
+            <td>OFF</td>
+            <td>ON</td>
+            <td>OFF</td>
+            <td>ON</td>
+          </tr>
+          <tr>
+            <td>Channel 6</td>
+            <td>OFF</td>
+            <td>ON</td>
+            <td>ON</td>
+            <td>OFF</td>
+          </tr>
+          <tr>
+            <td>Channel 7</td>
+            <td>OFF</td>
+            <td>ON</td>
+            <td>ON</td>
+            <td>ON</td>
+          </tr>
+          <tr>
+            <td>Channel 8</td>
+            <td>ON</td>
+            <td>OFF</td>
+            <td>OFF</td>
+            <td>OFF</td>
+          </tr>
+          <tr>
+            <td>Channel 9</td>
+            <td>ON</td>
+            <td>OFF</td>
+            <td>OFF</td>
+            <td>ON</td>
+          </tr>
+          <tr>
+            <td>Channel 10</td>
+            <td>ON</td>
+            <td>OFF</td>
+            <td>ON</td>
+            <td>OFF</td>
+          </tr>
+          <tr>
+            <td>Channel 11</td>
+            <td>ON</td>
+            <td>OFF</td>
+            <td>ON</td>
+            <td>ON</td>
+          </tr>
+          <tr>
+            <td>Channel 12</td>
+            <td>ON</td>
+            <td>ON</td>
+            <td>OFF</td>
+            <td>OFF</td>
+          </tr>
+          <tr>
+            <td>Channel 13</td>
+            <td>ON</td>
+            <td>ON</td>
+            <td>OFF</td>
+            <td>ON</td>
+          </tr>
+          <tr>
+            <td>Channel 14</td>
+            <td>ON</td>
+            <td>ON</td>
+            <td>ON</td>
+            <td>OFF</td>
+          </tr>
+          <tr>
+            <td>Channel 15</td>
+            <td>ON</td>
+            <td>ON</td>
+            <td>ON</td>
+            <td>ON</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
 
     <section>
@@ -199,7 +342,8 @@
           <tr>
             <th>Feature</th>
             <th>Firmware 1.1</th>
-            <th>Firmware 1.2+</th>
+            <th>Firmware 1.2</th>
+            <th>Firmware 1.3+</th>
           </tr>
         </thead>
         <tbody>
@@ -207,9 +351,11 @@
             <td>Speech, sentence banks, and MIDI controls</td>
             <td>Supported</td>
             <td>Supported</td>
+            <td>Supported</td>
           </tr>
           <tr>
             <td>Identify Serial and Identify MIDI</td>
+            <td>Supported</td>
             <td>Supported</td>
             <td>Supported</td>
           </tr>
@@ -217,9 +363,17 @@
             <td>Model and chip ID in the GUI</td>
             <td>Not reported</td>
             <td>Supported</td>
+            <td>Supported</td>
           </tr>
           <tr>
             <td>Chip ID on the board display at startup</td>
+            <td>Not available</td>
+            <td>Supported</td>
+            <td>Supported</td>
+          </tr>
+          <tr>
+            <td>DIP-switch MIDI channels 1–15 plus Omni</td>
+            <td>Not available</td>
             <td>Not available</td>
             <td>Supported</td>
           </tr>
@@ -229,14 +383,23 @@
 
     <section>
       <h2>RAM And FRAM Sentences</h2>
-      <p>When the serial port connects, the GUI asks the firmware for its sentence-bank layout. The reply tells the GUI how many RAM slots exist, whether FRAM is present, the first MIDI note for each bank, and the maximum sentence length.</p>
+      <p>When the serial port connects, the GUI asks the firmware for its sentence-bank layout. The reply tells the GUI
+        how many RAM slots exist, whether FRAM is present, the first MIDI note for each bank, and the maximum sentence
+        length.</p>
       <ul>
-        <li><strong>RAM</strong> is always available. RAM sentences are temporary and are lost when the board is reset or powered off.</li>
-        <li><strong>FRAM</strong> appears only when the board detects the external FRAM memory. FRAM sentences are stored persistently and remain after power-off.</li>
+        <li><strong>RAM</strong> is always available. RAM sentences are temporary and are lost when the board is reset
+          or powered off.</li>
+        <li><strong>FRAM</strong> appears only when the board detects the external FRAM memory. FRAM sentences are
+          stored persistently and remain after power-off.</li>
       </ul>
-      <p>If FRAM is not detected, the FRAM tab stays disabled. If FRAM is detected, the GUI enables the FRAM tab and loads the stored sentences from the board.</p>
-      <p>Use <code>Reload from board</code> to read the current bank, <code>Save all changed</code> to write edited slots, and <code>Play</code> on a slot to speak it immediately. <code>Fill RAM slots</code> and <code>Fill FRAM slots</code> copy one non-empty pasted line into each slot.</p>
-      <p>RAM slots are MIDI-triggered from the RAM note range shown in the tab header. FRAM MIDI notes start after the RAM note range, so the two banks do not overlap. If there are more FRAM slots than available MIDI notes, the remaining FRAM slots can still be edited and played from the GUI.</p>
+      <p>If FRAM is not detected, the FRAM tab stays disabled. If FRAM is detected, the GUI enables the FRAM tab and
+        loads the stored sentences from the board.</p>
+      <p>Use <code>Reload from board</code> to read the current bank, <code>Save all changed</code> to write edited
+        slots, and <code>Play</code> on a slot to speak it immediately. <code>Fill RAM slots</code> and
+        <code>Fill FRAM slots</code> copy one non-empty pasted line into each slot.</p>
+      <p>RAM slots are MIDI-triggered from the RAM note range shown in the tab header. FRAM MIDI notes start after the
+        RAM note range, so the two banks do not overlap. If there are more FRAM slots than available MIDI notes, the
+        remaining FRAM slots can still be edited and played from the GUI.</p>
     </section>
 
     <section>
