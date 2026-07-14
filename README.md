@@ -1,6 +1,6 @@
 # Kraftor SAM Designer
 
-Browser control surface for the Kraftor SAM firmware. GUI version 1.5 provides live text-to-speech control, MIDI voice shaping, RAM and FRAM sentence-bank editing, printable reference sheets, and a few retro interface skins.
+Browser control surface for the Kraftor SAM firmware. GUI version 1.6 provides live text-to-speech control, MIDI voice shaping, RAM and FRAM sentence-bank editing, printable reference sheets, and a few retro interface skins.
 
 [Open the published app](https://deladriere.github.io/SAM_Designer/)
 
@@ -60,7 +60,7 @@ practical way to match them.
 
 ## Firmware Compatibility
 
-- Firmware 1.3 adds DIP-switch MIDI channel selection. GUI 1.5 sends CC, pitch bend,
+- Firmware 1.3 adds DIP-switch MIDI channel selection. GUI 1.6 sends CC, pitch bend,
   and Identify MIDI on the selected channel so it can match the board.
 - Firmware 1.2 or newer reports `MODEL=SAM` and the unique SAMD21 chip ID. The app
   displays both after connecting over serial.
