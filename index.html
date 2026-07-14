@@ -1372,6 +1372,42 @@
         littleOldLady: { label: 'Little Old Lady', speed: 82, pitch: 32, throat: 145, mouth: 145 },
         extraTerrestrial: { label: 'Extra-Terrestrial', speed: 100, pitch: 64, throat: 150, mouth: 200 }
       };
+      const VOICE_SETTINGS_STORAGE_KEY = 'samVoiceSettings';
+
+      function clampVoiceValue(value, fallback) {
+        const number = Number(value);
+        return Number.isFinite(number)
+          ? Math.max(0, Math.min(255, Math.round(number)))
+          : fallback;
+      }
+
+      function loadVoiceSettings() {
+        const defaults = voicePresets.sam;
+        try {
+          const saved = JSON.parse(localStorage.getItem(VOICE_SETTINGS_STORAGE_KEY) || '{}');
+          return {
+            speed: clampVoiceValue(saved.speed, defaults.speed),
+            pitch: clampVoiceValue(saved.pitch, defaults.pitch),
+            mouth: clampVoiceValue(saved.mouth, defaults.mouth),
+            throat: clampVoiceValue(saved.throat, defaults.throat)
+          };
+        } catch {
+          return { ...defaults };
+        }
+      }
+
+      function saveVoiceSettings() {
+        const defaults = voicePresets.sam;
+        const settings = {};
+        ['speed', 'pitch', 'mouth', 'throat'].forEach(key => {
+          const value = document.getElementById(`${key}Value`)?.textContent;
+          settings[key] = clampVoiceValue(value, defaults[key]);
+        });
+        try {
+          localStorage.setItem(VOICE_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+        } catch {
+        }
+      }
       const skinNexusColors = {
         amiga: { accent: '#ff8b00', fill: '#d7d7d7', dark: '#101010', light: '#ffffff', medium: '#6b6b6b' },
         hal: { accent: '#ff1b1b', fill: '#252525', dark: '#050505', light: '#f2f2f2', medium: '#454545' },
@@ -1411,15 +1447,18 @@
 
         applyNexusSkin(document.getElementById('skinSelect')?.value || 'amiga');
 
+        const savedVoice = loadVoiceSettings();
         const configs = [
-          { key: 'speed', selector: '#speedPot', value: 72, output: 'speedValue', kind: 'cc', cc: 1, label: 'speed', inverted: true },
-          { key: 'pitch', selector: '#pitchPot', value: 64, output: 'pitchValue', kind: 'bend', label: 'pitch bend', inverted: true },
-          { key: 'mouth', selector: '#mouthPot', value: 128, output: 'mouthValue', kind: 'cc', cc: 2, label: 'mouth' },
-          { key: 'throat', selector: '#throatPot', value: 128, output: 'throatValue', kind: 'cc', cc: 3, label: 'throat' }
+          { key: 'speed', selector: '#speedPot', value: savedVoice.speed, output: 'speedValue', kind: 'cc', cc: 1, label: 'speed', inverted: true },
+          { key: 'pitch', selector: '#pitchPot', value: savedVoice.pitch, output: 'pitchValue', kind: 'bend', label: 'pitch bend', inverted: true },
+          { key: 'mouth', selector: '#mouthPot', value: savedVoice.mouth, output: 'mouthValue', kind: 'cc', cc: 2, label: 'mouth' },
+          { key: 'throat', selector: '#throatPot', value: savedVoice.throat, output: 'throatValue', kind: 'cc', cc: 3, label: 'throat' }
         ];
 
         configs.forEach(config => {
           try {
+            const output = document.getElementById(config.output);
+            if (output) output.textContent = String(config.value);
             const dial = new Nexus.Dial(config.selector, {
               size: [92, 92],
               interaction: 'radial',
@@ -1434,6 +1473,7 @@
               const rounded = Math.round(Number(value || 0));
               const el = document.getElementById(config.output);
               if (el) el.textContent = String(rounded);
+              saveVoiceSettings();
               if (voicePotsReady) sendMidiControl(config, rounded);
             });
           } catch {
@@ -1448,6 +1488,7 @@
         const rounded = Math.max(0, Math.min(255, Math.round(Number(value || 0))));
         const output = document.getElementById(`${key}Value`);
         if (output) output.textContent = String(rounded);
+        saveVoiceSettings();
 
         if (entry && entry.dial) {
           const previous = voicePotsReady;
@@ -2468,7 +2509,10 @@
         if (!midiAccess || !select || !select.value) return;
         midiOutput = midiAccess.outputs.get(select.value) || null;
         updateMidiUi();
-        if (midiOutput) appendSerialLog(`<< MIDI CONNECTED ${midiOutputDisplayName(midiOutput)}\r\n`);
+        if (midiOutput) {
+          appendSerialLog(`<< MIDI CONNECTED ${midiOutputDisplayName(midiOutput)}\r\n`);
+          sendCurrentVoiceSettings();
+        }
       }
 
       function disconnectMidiOutput() {
@@ -2565,6 +2609,18 @@
           midiOutput.send([0xE0 | channel, lsb, msb]);
           appendSerialLog(`>> MIDI CH${channelNumber} ${config.label} ${bendValue}\r\n`);
         }
+      }
+
+      function sendCurrentVoiceSettings() {
+        ['speed', 'pitch', 'mouth', 'throat'].forEach(key => {
+          const entry = voiceDials[key];
+          if (!entry) return;
+          const value = clampVoiceValue(
+            document.getElementById(`${key}Value`)?.textContent,
+            voicePresets.sam[key]
+          );
+          sendMidiControl(entry.config, value);
+        });
       }
 
       function selectedMidiChannelIndex() {
